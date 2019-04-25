@@ -84,7 +84,7 @@ class User(db.Model):
     likes = db.relationship(
         "Message",
         secondary="likes",
-        backref="messages")    
+        backref="liked_messages")
 
     def __repr__(self):
         return f"<User #{self.id}: {self.username}, {self.email}>"

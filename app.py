@@ -141,10 +141,9 @@ def list_users():
     return render_template('users/index.html', users=users)
 
 
-@app.route('/users/<int:user_id>')
+@app.route('/users/<int:user_id>', methods=["GET", "POST"])
 def users_show(user_id):
     """Show user profile."""
-    
     user = User.query.get_or_404(user_id)
 
     # snagging messages in order from the database;
@@ -199,6 +198,13 @@ def add_follow(follow_id):
     return redirect(f"/users/{g.user.id}/following")
 
 
+@app.route('/users/<int:user_id>/likes')
+def show_likes(user_id):
+    user = User.query.get_or_404(user_id)
+    likes = g.user.likes
+    return render_template('/users/liked_messages.html', liked_messages=likes, user=user)
+
+
 @app.route('/users/stop-following/<int:follow_id>', methods=['POST'])
 def stop_following(follow_id):
     """Have currently-logged-in-user stop following this user."""
@@ -243,10 +249,6 @@ def profile():
     return render_template('users/edit.html', form=form)
 
 
-
-
-
-
 @app.route('/users/delete', methods=["POST"])
 def delete_user():
     """Delete user."""
@@ -288,7 +290,7 @@ def messages_add():
     return render_template('messages/new.html', form=form)
 
 
-@app.route('/messages/<int:message_id>', methods=["GET", "POST"])
+@app.route('/messages/<int:message_id>', methods=[ "POST"])
 def messages_show(message_id):
     """Show a message."""
     msg = Message.query.get(message_id)
@@ -300,10 +302,9 @@ def messages_show(message_id):
 
         return redirect('/')
     elif like:
-        # g.user.likes.remove(like.id)
         db.session.delete(like)
         db.session.commit()
-        return 'hi'
+        return redirect('/')
     else:
         liked_post = Like(message_id=msg_id, user_id=user_id)
         db.session.add(liked_post)
@@ -337,9 +338,6 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followees
     """
-    if request.method == "POST":
-        print('*******', 'HEY I POSTED!')
-    
     if g.user:
         users_ids = [followee.id for followee in g.user.following]
         users_ids.append(g.user.id)

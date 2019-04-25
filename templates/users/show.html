@@ -6,6 +6,7 @@
       {% for message in messages %}
 
         <li class="list-group-item">
+          {% if message in g.user.likes%}
           <a href="/messages/{{ message.id }}" class="message-link"></a>
 
           <a href="/users/{{ user.id }}">
@@ -16,8 +17,24 @@
             <a href="/users/{{ user.id }}">@{{ user.username }}</a>
             <span class="text-muted">{{ message.timestamp.strftime('%d %B %Y') }}</span>
             <p>{{ message.text }}</p>
+              <button type="submit"><i class="fas fa-star"></i></button>   
           </div>
         </li>
+        {% else %}
+        <a href="/messages/{{ message.id }}" class="message-link"></a>
+
+          <a href="/users/{{ user.id }}">
+            <img src="{{ user.image_url }}" alt="user image" class="timeline-image">
+          </a>
+
+          <div class="message-area">
+            <a href="/users/{{ user.id }}">@{{ user.username }}</a>
+            <span class="text-muted">{{ message.timestamp.strftime('%d %B %Y') }}</span>
+            <p>{{ message.text }}</p>
+            <button type="submit"><i class="far fa-star"></i></button>   
+          </div>
+        </li>
+        {% endif %}
 
       {% endfor %}
 
