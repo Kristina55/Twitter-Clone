@@ -81,6 +81,11 @@ class User(db.Model):
         secondaryjoin=(FollowersFollowee.followee_id == id),
         backref="following")
 
+    likes = db.relationship(
+        "Message",
+        secondary="likes",
+        backref="messages")    
+
     def __repr__(self):
         return f"<User #{self.id}: {self.username}, {self.email}>"
 
@@ -160,6 +165,29 @@ class Message(db.Model):
     user_id = db.Column(
         db.Integer,
         db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+
+class Like(db.Model):
+    """An individual message ("warble")."""
+
+    __tablename__ = 'likes'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    message_id = db.Column(
+        db.Integer,
+        db.ForeignKey('messages.id', ondelete='CASCADE'),
         nullable=False,
     )
 

@@ -4,8 +4,8 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
-from models import db, connect_db, User, Message
+from forms import UserAddForm, LoginForm, MessageForm, ProfileEditForm
+from models import db, connect_db, User, Message, Like
 
 CURR_USER_KEY = "curr_user"
 
@@ -18,11 +18,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
+
 
 
 ##############################################################################
@@ -75,6 +76,7 @@ def signup():
                 email=form.email.data,
                 image_url=form.image_url.data or User.image_url.default.arg,
             )
+            
             db.session.commit()
 
         except IntegrityError as e:
@@ -112,8 +114,11 @@ def login():
 @app.route('/logout')
 def logout():
     """Handle logout of user."""
-
-    # IMPLEMENT THIS
+    user = User.query.get_or_404(session.get(CURR_USER_KEY))
+    if CURR_USER_KEY in session:
+        do_logout()
+        flash(f"Hello, {user.username} you are logged out")
+        return redirect("/")
 
 
 ##############################################################################
@@ -139,7 +144,7 @@ def list_users():
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-
+    
     user = User.query.get_or_404(user_id)
 
     # snagging messages in order from the database;
@@ -174,6 +179,7 @@ def users_followers(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
+    
     return render_template('users/followers.html', user=user)
 
 
@@ -188,6 +194,7 @@ def add_follow(follow_id):
     followee = User.query.get_or_404(follow_id)
     g.user.following.append(followee)
     db.session.commit()
+    
 
     return redirect(f"/users/{g.user.id}/following")
 
@@ -211,7 +218,33 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    if CURR_USER_KEY not in session:
+        return redirect("/login")
+    user = User.query.get_or_404(session[CURR_USER_KEY])
+
+    form = ProfileEditForm(obj=user)
+
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.email = form.email.data
+        user.image_url = form.image_url.data
+        user.header_image_url = form.header_image_url.data
+        user.bio = form.bio.data
+        user.location = form.location.data
+        user_authentication = User.authenticate(username=user.username,password=form.password.data)
+        
+        if not user_authentication:
+            flash(f"Hello, {user.username}! incorrect password")
+            return redirect("/")
+        else:
+            db.session.commit()    
+            return redirect(f"/users/{user.id}")
+
+    return render_template('users/edit.html', form=form)
+
+
+
+
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -250,18 +283,32 @@ def messages_add():
         msg = Message(text=form.text.data)
         g.user.messages.append(msg)
         db.session.commit()
-
         return redirect(f"/users/{g.user.id}")
 
     return render_template('messages/new.html', form=form)
 
 
-@app.route('/messages/<int:message_id>', methods=["GET"])
+@app.route('/messages/<int:message_id>', methods=["GET", "POST"])
 def messages_show(message_id):
     """Show a message."""
+    # ******* WE ARE HERE!!!! We need to check the likes in the database, and remove the like if it's already in there and also add an icon for that like.
+    # Show all of the warbles that the user liked (count and new route)
 
     msg = Message.query.get(message_id)
-    return render_template('messages/show.html', message=msg)
+    msg_id = message_id
+    user_id = g.user.id
+    # import pdb; pdb.set_trace()
+    liked_post = Like(message_id=msg_id, user_id=user_id)
+    db.session.add(liked_post)
+    db.session.commit()
+
+    
+    
+    # if g.user.id != msg.user_id:
+    #     session["likes"].append(message_id)
+    # print('********', session["likes"])   
+    return redirect ("/")
+    # return render_template('messages/show.html', message=msg)
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
@@ -283,17 +330,22 @@ def messages_destroy(message_id):
 # Homepage and error pages
 
 
-@app.route('/')
+@app.route('/', methods=["GET", "POST"])
 def homepage():
     """Show homepage:
 
     - anon users: no messages
     - logged in: 100 most recent messages of followees
     """
-
+    if request.method == "POST":
+        print('*******', 'HEY I POSTED!')
+    
     if g.user:
+        users_ids = [followee.id for followee in g.user.following]
+        users_ids.append(g.user.id)
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_((users_ids)))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
