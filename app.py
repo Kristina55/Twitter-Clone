@@ -291,24 +291,24 @@ def messages_add():
 @app.route('/messages/<int:message_id>', methods=["GET", "POST"])
 def messages_show(message_id):
     """Show a message."""
-    # ******* WE ARE HERE!!!! We need to check the likes in the database, and remove the like if it's already in there and also add an icon for that like.
-    # Show all of the warbles that the user liked (count and new route)
-
     msg = Message.query.get(message_id)
     msg_id = message_id
     user_id = g.user.id
-    # import pdb; pdb.set_trace()
-    liked_post = Like(message_id=msg_id, user_id=user_id)
-    db.session.add(liked_post)
-    db.session.commit()
+    like = Like.query.filter_by(message_id=msg_id, user_id=user_id).first()
 
-    
-    
-    # if g.user.id != msg.user_id:
-    #     session["likes"].append(message_id)
-    # print('********', session["likes"])   
-    return redirect ("/")
-    # return render_template('messages/show.html', message=msg)
+    if g.user.id == msg.user_id:
+
+        return redirect('/')
+    elif like:
+        # g.user.likes.remove(like.id)
+        db.session.delete(like)
+        db.session.commit()
+        return 'hi'
+    else:
+        liked_post = Like(message_id=msg_id, user_id=user_id)
+        db.session.add(liked_post)
+        db.session.commit()
+        return redirect ("/")
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
