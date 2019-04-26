@@ -89,8 +89,8 @@ class UserModelTestCase(TestCase):
         )
         db.session.add(u2)
 
-        follow = FollowersFollowee(followee_id=u1.followers.id,
-                                   follower_id=u2.followers.id)
+        follow = FollowersFollowee(followee_id=u1.id,
+                                   follower_id=u2.id)
 
         db.session.add(follow)
         db.commit()
@@ -99,5 +99,5 @@ class UserModelTestCase(TestCase):
 
         print('****', follow)
 
-        # self.assertEqual(User.is_following)
+        self.assertEqual(User.is_following)
 
