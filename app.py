@@ -25,7 +25,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 connect_db(app)
 
 
-
 ##############################################################################
 # User signup/login/logout
 
@@ -76,7 +75,7 @@ def signup():
                 email=form.email.data,
                 image_url=form.image_url.data or User.image_url.default.arg,
             )
-            
+           
             db.session.commit()
 
         except IntegrityError as e:
@@ -347,7 +346,6 @@ def homepage():
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
-
         return render_template('home.html', messages=messages)
 
     else:
